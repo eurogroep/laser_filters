@@ -124,7 +124,7 @@ bool LaserScanSpeckleFilter::update(const sensor_msgs::LaserScan& input_scan, se
   auto end = std::chrono::high_resolution_clock::now();
   auto update_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-  ROS_DEBUG_NAMED("LaserScanSpeckleFilter", "Update took %lu microseconds", update_elapsed);
+  ROS_DEBUG_NAMED("LaserScanSpeckleFilter", "LaserScanSpeckleFilter update took %lu microseconds", update_elapsed);
 
   return true;
 }

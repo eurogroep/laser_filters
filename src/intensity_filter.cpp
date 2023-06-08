@@ -107,7 +107,7 @@ bool LaserScanIntensityFilter::update(const sensor_msgs::LaserScan& input_scan, 
   auto end = std::chrono::high_resolution_clock::now();
   auto update_elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-  ROS_DEBUG_NAMED("LaserScanIntensityFilter", "Update took %lu microseconds", update_elapsed);
+  ROS_DEBUG_NAMED("LaserScanIntensityFilter", "LaserScanIntensityFilter update took %lu microseconds", update_elapsed);
   return true;
 }
 
