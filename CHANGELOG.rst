@@ -2,8 +2,8 @@
 Changelog for package laser_filters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+1.10.0 (2023-06-20)
+-------------------
 * feat(filters): Debug log filter duration (`#1 <https://github.com/eurogroep/laser_filters/issues/1>`_)
 * Merge pull request `#177 <https://github.com/eurogroep/laser_filters/issues/177>`_ from lucasw/ubuntu2204
   use class_list_macros.hpp instead of .h
