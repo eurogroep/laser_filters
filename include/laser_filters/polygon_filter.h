@@ -67,17 +67,18 @@ public:
   virtual void configure(PolygonFilterConfig& config) { reconfigureCB(config, 0); }
 
   virtual bool update(const sensor_msgs::LaserScan& input_scan, sensor_msgs::LaserScan& filtered_scan) { return false; }
+  virtual void footprintCB(const geometry_msgs::Polygon &polygon);
 
 protected:
   ros::Publisher polygon_pub_;
+  ros::Subscriber footprint_sub_;
   boost::recursive_mutex own_mutex_;
   // configuration
   std::string polygon_frame_;
   geometry_msgs::Polygon polygon_;
-  double polygon_padding_;
-  bool invert_filter_;
   bool is_polygon_published_ = false;
   std::shared_ptr<dynamic_reconfigure::Server<laser_filters::PolygonFilterConfig>> dyn_server_;
+  PolygonFilterConfig config_ = PolygonFilterConfig::__getDefault__();
 
   virtual void reconfigureCB(laser_filters::PolygonFilterConfig& config, uint32_t level);
 
@@ -108,6 +109,7 @@ class StaticLaserScanPolygonFilter : public LaserScanPolygonFilterBase {
 public:
   bool configure() override;
   bool update(const sensor_msgs::LaserScan& input_scan, sensor_msgs::LaserScan& filtered_scan) override;
+  void footprintCB(const geometry_msgs::Polygon &polygon);
   
 protected:
   void reconfigureCB(laser_filters::PolygonFilterConfig& config, uint32_t level) override;

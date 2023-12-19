@@ -252,28 +252,30 @@ bool LaserScanPolygonFilterBase::configure()
 {
   XmlRpc::XmlRpcValue polygon_xmlrpc;
   std::string polygon_string;
-  PolygonFilterConfig param_config;
 
   ros::NodeHandle private_nh("~" + getName());
   dyn_server_.reset(new dynamic_reconfigure::Server<laser_filters::PolygonFilterConfig>(own_mutex_, private_nh));
   dynamic_reconfigure::Server<laser_filters::PolygonFilterConfig>::CallbackType f;
-  f = [this](auto& config, auto level){ reconfigureCB(config, level); };
+  f = [this](auto& config_, auto level){ reconfigureCB(config_, level); };
   dyn_server_->setCallback(f);
 
+  std::string footprint_topic = "base_footprint_exclude";
+  if(!getParam("footprint_topic", footprint_topic))
+  {
+    ROS_WARN_STREAM("Footprint topic not set, assuming default: " << footprint_topic);
+  }
   bool polygon_set = getParam("polygon", polygon_xmlrpc);
   bool polygon_frame_set = getParam("polygon_frame", polygon_frame_);
-  bool invert_set = getParam("invert", invert_filter_);
+  bool invert_set = getParam("invert", config_.invert);
   polygon_ = makePolygonFromXMLRPC(polygon_xmlrpc, "polygon");
 
-  double polygon_padding = 0;
-  getParam("polygon_padding", polygon_padding);
+  getParam("polygon_padding", config_.polygon_padding);
 
   polygon_string = polygonToString(polygon_);
-  param_config.polygon = polygon_string;
-  param_config.polygon_padding = polygon_padding;
-  param_config.invert = invert_filter_;
-  dyn_server_->updateConfig(param_config);
+  config_.polygon = polygon_string;
+  dyn_server_->updateConfig(config_);
 
+  footprint_sub_ = private_nh.subscribe(footprint_topic, 1, &LaserScanPolygonFilterBase::footprintCB, this);
   polygon_pub_ = private_nh.advertise<geometry_msgs::PolygonStamped>("polygon", 1, true);
   is_polygon_published_ = false;
 
@@ -288,10 +290,23 @@ bool LaserScanPolygonFilterBase::configure()
   if (!invert_set)
   {
     ROS_INFO("invert filter not set, assuming false");
-    invert_filter_ = false;
   }
 
   return polygon_frame_set && polygon_set;
+}
+
+void LaserScanPolygonFilterBase::footprintCB(const geometry_msgs::Polygon &polygon)
+{
+  if(polygon.points.size() < 3)
+  {
+    ROS_WARN("Footprint needs at least three points for the robot polygon, ignoring message");
+    return;
+  }
+  polygon_ = polygon;
+  config_.polygon = polygonToString(polygon_);
+  dyn_server_->updateConfig(config_);
+  padPolygon(polygon_, config_.polygon_padding);
+  is_polygon_published_ = false;
 }
 
 // See https://web.cs.ucdavis.edu/~okreylos/TAship/Spring2000/PointInPolygon.html
@@ -325,9 +340,9 @@ void LaserScanPolygonFilterBase::publishPolygon()
 
 void LaserScanPolygonFilterBase::reconfigureCB(laser_filters::PolygonFilterConfig& config, uint32_t level)
 {
-  invert_filter_ = config.invert;
+  config_ = config;
   polygon_ = makePolygonFromString(config.polygon, polygon_);
-  padPolygon(polygon_, config.polygon_padding);
+  padPolygon(polygon_, config_.polygon_padding);
   is_polygon_published_ = false;
 }
 
@@ -400,7 +415,7 @@ bool LaserScanPolygonFilter::update(const sensor_msgs::LaserScan& input_scan,
 
     tf::Point point(x, y, z);
 
-    if (!invert_filter_)
+    if (!config_.invert)
     {
       if (inPolygon(point))
       {
@@ -537,7 +552,7 @@ bool StaticLaserScanPolygonFilter::update(const sensor_msgs::LaserScan& input_sc
     float y = co_sine_map_(i, 1) * range;
     tf::Point point(x, y, 0);
 
-    if (invert_filter_ != inPolygon(point))
+    if (config_.invert != inPolygon(point))
     {
       output_scan.ranges[i] = std::numeric_limits<float>::quiet_NaN();
     }
@@ -553,4 +568,11 @@ void StaticLaserScanPolygonFilter::reconfigureCB(laser_filters::PolygonFilterCon
   is_polygon_transformed_ = false;
   LaserScanPolygonFilterBase::reconfigureCB(config, level);
 }
+
+void StaticLaserScanPolygonFilter::footprintCB(const geometry_msgs::Polygon &polygon)
+{
+  is_polygon_transformed_ = false;
+  LaserScanPolygonFilterBase::footprintCB(polygon);
+}
+
 }
