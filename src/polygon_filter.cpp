@@ -44,7 +44,7 @@
 #include <ros/ros.h>
 #include <dynamic_reconfigure/server.h>
 #include <laser_filters/PolygonFilterConfig.h>
-#include <geometry_msgs/PolygonStamped.h>
+#include <visualization_msgs/Marker.h>
 #include <cstdio>  // for EOF
 #include <string>
 #include <sstream>
@@ -246,6 +246,48 @@ std::string polygonToString(geometry_msgs::Polygon polygon)
   return polygon_string;
 }
 
+geometry_msgs::Point convertPoint32ToPoint(const geometry_msgs::Point32 &point_in)
+{
+  geometry_msgs::Point point_out;
+  point_out.x = point_in.x;
+  point_out.y = point_in.y;
+  point_out.z = point_in.z;
+  return point_out;
+}
+
+visualization_msgs::Marker createMarkerFromPolygon(const geometry_msgs::Polygon &polygon, const std::string &frame_id)
+{
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = frame_id;
+  marker.header.stamp = ros::Time().now();
+  marker.id = 1;
+  marker.type = visualization_msgs::Marker::LINE_STRIP;
+  marker.action = visualization_msgs::Marker::MODIFY;
+  marker.pose.position.x = 0;
+  marker.pose.position.y = 0;
+  marker.pose.position.z = 0;
+  marker.pose.orientation.x = 0;
+  marker.pose.orientation.y = 0;
+  marker.pose.orientation.z = 0;
+  marker.pose.orientation.w = 1;
+  marker.scale.x = 0.01;
+  marker.frame_locked = true;
+  marker.color.r = 0.0;
+  marker.color.g = 0.0;
+  marker.color.b = 1.0;
+  marker.color.a = 1.0;
+
+  if(polygon.points.size()>0){
+    marker.points.resize(polygon.points.size()+1);  
+    for(int i=0; i!=polygon.points.size();i++)
+    {
+      marker.points[i] = convertPoint32ToPoint(polygon.points[i]);
+    }
+    marker.points[polygon.points.size()] = convertPoint32ToPoint(polygon.points[0]);
+  }
+  return marker;
+}
+
 namespace laser_filters{
 
 bool LaserScanPolygonFilterBase::configure()
@@ -276,7 +318,7 @@ bool LaserScanPolygonFilterBase::configure()
   dyn_server_->updateConfig(config_);
 
   footprint_sub_ = private_nh.subscribe(footprint_topic, 1, &LaserScanPolygonFilterBase::footprintCB, this);
-  polygon_pub_ = private_nh.advertise<geometry_msgs::PolygonStamped>("polygon", 1, true);
+  marker_pub_ = private_nh.advertise<visualization_msgs::Marker>("polygon", 1, true);
   is_polygon_published_ = false;
 
   if (!polygon_frame_set)
@@ -329,11 +371,8 @@ void LaserScanPolygonFilterBase::publishPolygon()
 {
   if (!is_polygon_published_)
   {
-    geometry_msgs::PolygonStamped polygon_stamped;
-    polygon_stamped.header.frame_id = polygon_frame_;
-    polygon_stamped.header.stamp = ros::Time::now();
-    polygon_stamped.polygon = polygon_;
-    polygon_pub_.publish(polygon_stamped);
+    visualization_msgs::Marker marker = createMarkerFromPolygon(polygon_, polygon_frame_);  
+    marker_pub_.publish(marker);
     is_polygon_published_ = true;
   }
 }
@@ -354,7 +393,6 @@ bool LaserScanPolygonFilter::update(const sensor_msgs::LaserScan& input_scan,
   boost::recursive_mutex::scoped_lock lock(own_mutex_);
 
   publishPolygon();
-
   output_scan = input_scan;
 
   sensor_msgs::PointCloud2 laser_cloud;

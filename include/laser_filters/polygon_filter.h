@@ -70,7 +70,7 @@ public:
   virtual void footprintCB(const geometry_msgs::Polygon &polygon);
 
 protected:
-  ros::Publisher polygon_pub_;
+  ros::Publisher marker_pub_;
   ros::Subscriber footprint_sub_;
   boost::recursive_mutex own_mutex_;
   // configuration
