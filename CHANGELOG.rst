@@ -1,6 +1,11 @@
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 Changelog for package laser_filters
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+2.1.3 (2026-01-22)
+------------------
+- Feat: migrate jazzy (#11) [daniel-zellmann-lowpad]
+
 2.1.2 (2025-03-19)
 ------------------
 - Merge pull request #10 from eurogroep/fix/add-hearbeat-diagnostics.
